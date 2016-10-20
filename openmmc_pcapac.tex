@@ -33,6 +33,7 @@
 \usepackage{multirow}
 \usepackage{ragged2e}
 \usepackage{todonotes}
+\usepackage{epstopdf}
 
 %
 % if BibLaTeX is used
@@ -118,9 +119,15 @@ FreeRTOS project uses a modificated GPLv3 license, which allows the user to impl
 
 \section{Firmware Structure}
 The firmware was structured in order to be easy to upgrade and port to different boards and controllers.
-Therefore four different abstraction layers are implemented: \emph{Application}, \emph{Hardware Abstraction}, \emph{Port} and \emph{Driver}, disposed as in Figure ??.
+Therefore four different abstraction layers are implemented: \emph{Application}, \emph{Hardware Abstraction}, \emph{Port} and \emph{Driver}, disposed as in Figure \ref{fig:fw-structure}.
 
-\missingfigure[figwidth=7cm]{openMMC Firmware Structure}
+\begin{figure}[!htb]
+\centering
+%\includegraphics[scale=0.8]{fw-structure.eps}
+\includegraphics[scale=0.8]{fw-structure-dark.eps}
+\caption{openMMC firmware structure}
+\label{fig:fw-structure}
+\end{figure}
 
 \subsection{Application}
 The Application layer holds high-level tasks responsible for deciding which action will be taken based on the information provided by the lower level layers. Most of the functions implemented on this level are state-machine based, regurlarly checking and actuating on the board status.
@@ -153,9 +160,15 @@ The following modules were already implemented and tested in LNLS' AFC board:
 
 \subsection{Port}
 The Port layer serves as a connection between \emph{Driver} and the upper layers.
-Its purpose is to mask all functions provided by the controller drivers so that the upper layers only call generic functions defined in this level, as demonstrated in Figure ??.
+Its purpose is to mask all functions provided by the controller drivers so that the upper layers only call generic functions defined in this level, as demonstrated in Figure \ref{fig:port-example}.
 
-\missingfigure[figwidth=7cm]{Port Layer demonstration}
+\begin{figure}[!htb]
+\centering
+%\includegraphics[scale=0.6]{port-example.eps}
+\includegraphics[scale=0.6]{port-example-dark.eps}
+\caption{openMMC sensor update function call sequence}
+\label{fig:port-example}
+\end{figure}
 
 This layer presents a few restrictions regarding its structure. Developers responsible to implement new hardware drivers must follow the port layer functions' signature in order to maintain compatibility throughout the firmware.
 
@@ -166,18 +179,32 @@ Initial attempts towards a ATxMega128 port have been made by GSI *ref-to-Piotr-r
 The lowest layer is where the microcontroller peripheral drivers are implemented, accessing directly the hardware to control the outputs.
 Since the firmware upper layers don't call driver functions directly, this can be easily replaced by another implementation when the target controller is changed.
 
-\section{Board Porting}
-[writing]
-
 \section{Bootloader}
-Having a small footprint makes it possible to store more than one image of the running firmware, increasing the system's reliability. Taking advantage of this property, a Bootloader scheme was developed in order to manage the controller's memory sections and reserve a portion of the ROM to store a updated firmware. An example of the internal memory divison can be seen in Fig ??.
+Having a small footprint makes it possible to store more than one image of the running firmware, increasing the system's reliability. Taking advantage of this property, a Bootloader scheme was developed in order to manage the controller's memory sections and reserve a portion of the ROM to store a updated firmware. An example of the internal memory divison in a LPC1764 controller can be seen in Fig \ref{fig:bootloader-mem}.
 
-\missingfigure[figwidth=7cm]{bootloader memory mapping}
+\begin{figure}[!htb]
+\centering
+\includegraphics[scale=0.6]{bootloader-mem.eps}
+\caption{LPC1764 ROM organization with openMMC}
+\label{fig:bootloader-mem}
+\end{figure}
+
 
 The new firmware is sent to the MMC broken in small packages using HPM update protocol, defined by PICMG.
 The controller then writes page by page the new firmware in the reserved ROM section and also adds a update flag to the bootlader, indicating that this firmware is the more recent version and should be moved to the proper section in order to be executed.
 
-The bootlader is always executed first in power-up sequence, checking wheter there is a new firmware to write into execution section. If not, it just moves the program execution flow to the starting point of the user code area.
+The bootlader is always executed first in power-up sequence, checking whether there is a new firmware to write into execution section. If not, it just moves the program execution flow to the starting point of the user code area.
+
+\section{Build Automation}
+CMake is one of the most popular Build Automation softwares nowadays and it implements its own scripting language that allows the user to fully customize each build without having to worry about sources dependencies.
+
+Using this tool with openMMC allows developers to fit the firmware to the board hardware just by adding new modules in the compilation list present on each board port folder.
+The user is also able to set new compilation flags or link new libraries almost effortless.
+
+\section{Board Porting}
+openMMC also allows the user to easily port the firmware to a different board with other peripheral hardware configuration while keeping the target controller.
+
+Since all peripheral hardware drivers are implemented as modules in the \emph{Hardware Abstraction Layer}, only the \texttt{CMakeLists.txt} file inside the board folder have to be changed. In this file, all modules needed in each hardware configuration are selected based on a list parameter. When CMake is called to generate the automatic Makefiles, it parses this argument and includes all selected modules sources and dependecies in the compilation chain.
 
 \section{Code Size}
 openMMC has a really small memory footprint, which makes it perfect for embedded environments that traditionally have limited resources.
@@ -196,12 +223,6 @@ Table \ref{table:mem_usage} presents openMMC's average RAM usage and code size i
        \bottomrule
   \end{tabular}
 \end{table}
-
-\section{Build Automation}
-CMake is one of the most popular Build Automation softwares nowadays and it implements its own scripting language that allows the user to fully customize each build without having to worry about sources dependencies.
-
-Using this tool with openMMC allows developers to fit the firmware to the board hardware just by adding new modules in the compilation list present on each board port folder.
-The user is also able to set new compilation flags or link new libraries almost effortless.
 
 \section{Continuous Integration}
 Every modification in the application layer must be tested across all boards and controllers ports to assert that the firmware remains compatible.
