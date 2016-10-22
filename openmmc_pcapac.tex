@@ -64,7 +64,7 @@
 
 \begin{document}
 
-\title{openMMC: An Open-Source Modular Firmware for Board Management}
+\title{openMMC: An Open Source Modular Firmware for Board Management}
 
 \author{H. A. Silva\thanks{henrique.silva@lnls.br}, G. B. M. Bruno, LNLS, Campinas, Brazil}
 
@@ -72,13 +72,13 @@
 
 %
 \begin{abstract}
-  openMMC is an open-source firmware designed for board management in MicroTCA systems.
+  openMMC is an open source firmware designed for board management in MicroTCA systems.
   It has a modular architecture providing decoupling between application,
   board and microcontroller-specific routines, making it useful as a base for many
-  different designs, even the ones using less powerful controllers.
+  different designs, even those using less powerful controllers.
   Despite being developed in a MicroTCA context, the firmware can be easily adapted
   to other hardware platforms and communication protocols.
-  The firmware is based on the FreeRTOS operating system, over which each module
+  The firmware is based on the FreeRTOS operating system, over which each monitoring function
   (sensors, LEDs, Payload management, etc) runs its own independent task.
   The OS, despite its reduced footprint, also provides numerous tools for reliable
   communication among the tasks, controlling the board efficiently.
@@ -86,25 +86,28 @@
 
 \section{Introduction}
 
-LNLS Beam Diagnostics team is currently working on the Sirius' BPM electronics and has adopted the MicroTCA.4 standard by PICMG in its boards designs.
+LNLS Beam Diagnostics team is currently developing the Sirius' Beam Position Monitor (BPM) electronics and has adopted the MicroTCA.4\textregistered~ standard by PICMG \cite{picmg-mtca} in its boards designs \cite{bpm-electronic-spec}.
 
-The main board on the electron BPM system is the AMC FMC Carrier (AFC), which is a general purpose FPGA board that holds up to two mezzanine cards (FMCs).
-Those smaller cards carried by AFC can be implemented to have many different applications (e.g. fast digitizers, SFP modules, data pre-processing modules, RS485 communication). In this application, Fast Digitizer FMCs will be used in order to read the BPM analog signals.
+The main board on the electron BPM system is the AMC FMC Carrier (AFC) \cite{afc-ohwr}, which is a general purpose FPGA board that hosts up to two mezzanine cards in FMC form factor.
+Those smaller cards carried by AFC can be implemented to have many different applications (e.g. fast digitizers, SFP modules, data pre-processing modules, RS485 communication). In the BPM application, fast digitizer FMCs will be used in order to read the BPM analog signals.
 
-AMC Boards, as the application boards are called in the MicroTCA system, must have implemented a Module Management Controller (MMC), which usually is a microcontroller responsible for monitoring the board health and acting as a communication channel between the system manager and application using Intel's Intelligent Platform Management Interface (IPMI).
+AMC boards, as the application boards are called in the MicroTCA system, must have implemented a Module Management Controller (MMC), which usually is a microcontroller responsible for monitoring the board health and acting as a communication channel between the system manager and application using Intelligent Platform Management Interface (IPMI) \cite{ipmi}.
 
-openMMC was created to be an open-source (using GPLv3 license) modular and generic firmware, easily portable to other platforms. It runs over FreeRTOS, which gives the developer a wide set of tools to implement complex monitoring functions or advanced hardware control.
-Given its modular independent structure, it's possible to use the firmware in applications outside MicroTCA environment with little effort, changing the communication protocol in its lower layers for example.
+openMMC was created to be an open source (using GPLv3 license) modular and generic firmware, easily portable to other platforms. It runs over FreeRTOS, which gives the developer a wide set of tools to implement complex monitoring functions or advanced hardware control.
+Given its modular independent structure, it is possible to use the firmware in applications outside MicroTCA environment with little effort, changing the communication protocol in its lower layers, for example.
+
+The project development is being versioned in a GitHub repository \cite{openmmc-github}, using pull requests and issues tracking as its main collaboration tools.
 
 \section{Motivation}
-The development of openMMC started after some unfruitful tests with the available open-source MMC implementations on the community.
-Those firmwares were developed to run on specific target boards, so there was an effort to port them to match AFC's hardware.
+The development of openMMC started after some unfruitful tests with the available open source MMC implementations.
+Those firmwares were developed to run on specific target boards, requiring a substantial effort in order to port them to AFC's hardware and begin a functional evaluation process.
+
 After some attempts, it was clear that porting the code basically meant to rewrite it from scratch, given that its low level driver and application functions were deeply intertwined.
 
 The hardware flexibility offered by MicroTCA was not being accompained by its MMC firmware architecture, since each board implementation had to recreate the managing firmware. openMMC was thought to be the hardware independent firmware that could meet this need.
 
 \section{FreeRTOS}
-FreeRTOS is a popular open-source real time operating system for embedded controllers that has already been ported to over than 35 different architectures.
+FreeRTOS \cite{freertos} is a popular open source real time operating system for embedded controllers that has already been ported to a wide range of CPU architectures.
 
 It features a preemptive scheduler that allows the application code to run multiple tasks in parallel with a single core.
 The scheduler decides which task will run based on its priority. More important tasks are always executed first, whilst blocking the lower priority ones.
@@ -115,11 +118,11 @@ The developer can also use some unique functions provided, such as direct-to-tas
 
 Except for task creation, all tools on FreeRTOS can be stripped from its compilation, reducing resource usage, thus enabling use of cheaper and lower-power microcontrollers.
 
-FreeRTOS project uses a modificated GPLv3 license, which allows the user to implement its application on top of the OS without having to publish propietary code.
+FreeRTOS project uses a modified GPLv3 license, which allows the user to implement its application on top of the OS without having to publish proprietary code \cite{freertos-license}.
 
 \section{Firmware Structure}
 The firmware was structured in order to be easy to upgrade and port to different boards and controllers.
-Therefore four different abstraction layers are implemented: \emph{Application}, \emph{Hardware Abstraction}, \emph{Port} and \emph{Driver}, disposed as in Figure \ref{fig:fw-structure}.
+Therefore four different abstraction layers are implemented: \emph{Application}, \emph{Hardware Abstraction}, \emph{Port} and \emph{Driver}, arranged as in Figure \ref{fig:fw-structure}.
 
 \begin{figure}[!htb]
 \centering
@@ -133,9 +136,9 @@ Therefore four different abstraction layers are implemented: \emph{Application},
 The Application layer holds high-level tasks responsible for deciding which action will be taken based on the information provided by the lower level layers. Most of the functions implemented on this level are state-machine based, regurlarly checking and actuating on the board status.
 
 \subsection{Hardware Abstraction}
-In the Hardware Abstraction Layer (HAL) lies all the functions that interfaces with the board peripheral hardware, masking the internal calls to the IC registers for example. Since any board can benefit from a module in this layer, they're all stored together inside "modules" folder.
+In the Hardware Abstraction Layer (HAL) lies all the functions that interfaces with the board peripheral hardware, making the internal calls to the IC registers transparent to the caller for example. Since any board can benefit from a module in this layer, they are all stored together inside "modules" folder.
 
-An exception in the HAL is the IPMI Protocol module, that does not target any specific peripheral hardware. Instead, it's responsible to manage Intel IPMI protocol messages internally, decoding packets, asserting checksums and building responses accordingly.
+An exception in the HAL is the IPMI Protocol module, that does not target any specific peripheral hardware. Instead, it is responsible to manage IPMI protocol messages internally, decoding packets, asserting checksums and building responses accordingly.
 
 The following modules were already implemented and tested in LNLS' AFC board:
 \begin{Itemize}
@@ -144,7 +147,7 @@ The following modules were already implemented and tested in LNLS' AFC board:
 \item Watchdog Timer
 \item SCANSTA111 JTAG Switch
 \item ADN4604 Clock Crossbar Switch
-\item DAC AD84XX
+\item AD84XX DAC
 \item AT24MAC EEPROM
 \item 24xx64 EEPROM
 \item Hotswap Handle
@@ -170,17 +173,16 @@ Its purpose is to mask all functions provided by the controller drivers so that 
 \label{fig:port-example}
 \end{figure}
 
-This layer presents a few restrictions regarding its structure. Developers responsible to implement new hardware drivers must follow the port layer functions' signature in order to maintain compatibility throughout the firmware.
+This layer presents a few restrictions regarding its structure. Developers in charge of implementing new hardware drivers must follow the port layer functions' signature in order to maintain compatibility throughout the firmware.
 
-Currently, there is only one openMMC maintaned port, which targets LPC17 family chips.
-Initial attempts towards a ATxMega128 port have been made by GSI *ref-to-Piotr-repo*, but they have not been certified as compatible with the current openMMC version.
+Currently, there is only one port maintaned in mainline openMMC, which targets LPC17 family chips.
+Development of a port to ATxMega128 CPU has been initiated by GSI \cite{gsi-mmc}.
 
 \subsection{Drivers}
 The lowest layer is where the microcontroller peripheral drivers are implemented, accessing directly the hardware to control the outputs.
-Since the firmware upper layers don't call driver functions directly, this can be easily replaced by another implementation when the target controller is changed.
 
 \section{Bootloader}
-Having a small footprint makes it possible to store more than one image of the running firmware, increasing the system's reliability. Taking advantage of this property, a Bootloader scheme was developed in order to manage the controller's memory sections and reserve a portion of the ROM to store a updated firmware. An example of the internal memory divison in a LPC1764 controller can be seen in Fig \ref{fig:bootloader-mem}.
+Having a small footprint makes it possible to store more than one image of the running firmware, easing the system's upgrade process. Taking advantage of this property, a Bootloader scheme was developed in order to manage the controller's memory sections and reserve a portion of the ROM to store an updated firmware. An example of the internal memory divison in a LPC1764 controller can be seen in Figure \ref{fig:bootloader-mem}.
 
 \begin{figure}[!htb]
 \centering
@@ -190,13 +192,13 @@ Having a small footprint makes it possible to store more than one image of the r
 \end{figure}
 
 
-The new firmware is sent to the MMC broken in small packages using HPM update protocol, defined by PICMG.
+The new firmware is sent to the MMC broken in small packages using HPM update protocol \cite{hpm}, defined by PICMG.
 The controller then writes page by page the new firmware in the reserved ROM section and also adds a update flag to the bootlader, indicating that this firmware is the more recent version and should be moved to the proper section in order to be executed.
 
 The bootlader is always executed first in power-up sequence, checking whether there is a new firmware to write into execution section. If not, it just moves the program execution flow to the starting point of the user code area.
 
 \section{Build Automation}
-CMake is one of the most popular Build Automation softwares nowadays and it implements its own scripting language that allows the user to fully customize each build without having to worry about sources dependencies.
+CMake is a software designed to automate build systems \cite{cmake}, widely used in projects where the compilation chain has more than one build target and needs to manipulate multiple sources. It implements its own scripting language that allows the user to fully customize each build without having to worry about sources dependencies.
 
 Using this tool with openMMC allows developers to fit the firmware to the board hardware just by adding new modules in the compilation list present on each board port folder.
 The user is also able to set new compilation flags or link new libraries almost effortless.
@@ -207,7 +209,7 @@ openMMC also allows the user to easily port the firmware to a different board wi
 Since all peripheral hardware drivers are implemented as modules in the \emph{Hardware Abstraction Layer}, only the \texttt{CMakeLists.txt} file inside the board folder have to be changed. In this file, all modules needed in each hardware configuration are selected based on a list parameter. When CMake is called to generate the automatic Makefiles, it parses this argument and includes all selected modules sources and dependecies in the compilation chain.
 
 \section{Code Size}
-openMMC has a really small memory footprint, which makes it perfect for embedded environments that traditionally have limited resources.
+openMMC has a small memory footprint, which makes it perfect for embedded environments that traditionally have limited resources.
 Table \ref{table:mem_usage} presents openMMC's average RAM usage and code size in ROM after compiling in both minimal and standard configurations for AFC BPM board, using GCC's optimization flag -Os.
 
 \begin{table}[hbt]
@@ -218,8 +220,8 @@ Table \ref{table:mem_usage} presents openMMC's average RAM usage and code size i
     \toprule
     \textbf{Configuration} & \textbf{RAM [kB]} & \textbf{ROM [kB]} \\
     \midrule
-    Minimal                & 0.0               & 20.91  \\
-    Standard               & 0.0               & 29.69  \\
+    Minimal                & 5.54               & 20.91  \\
+    Standard               & 8.07               & 29.69  \\
        \bottomrule
   \end{tabular}
 \end{table}
@@ -229,49 +231,85 @@ Every modification in the application layer must be tested across all boards and
 
 Confirming that the firmware compiles with every variant option becomes very difficult as the ports count increases.
 Using a Continuous Integration tool allows the maintainer to run dedicated tests after each commit on the main repository and automatically reports if the lattest change has made any port unusable.
-Travis C.I. uses a simple script written in its own language to install the needed toolchains and by tracking the latest commits on the repository branches, it's able to perform build tests on them, ensuring that the latest modification is compatible with all board and controller ports.
+Travis C.I. \cite{travis-ci} uses a simple script written in its own language to install the needed toolchains and by tracking the latest commits on the repository branches, it is able to perform build tests on them, ensuring that the latest modification is compatible with all board and controller ports.
 
 \section{Documentation}
-The firmware documentation is written using Doxygen style. This way, the documentation format is completely automated and can have many different output formats such as HTML, \LaTeX , XML, RTF, etc.
+The firmware documentation is written using Doxygen style \cite{doxygen}. This way, the documentation format is completely automated and can have many different output formats such as HTML, \LaTeX , XML, RTF, etc.
 
-By hosting the firmware code in GitHub repository, one is able to use a feature called GitHub Pages, in which a small website for generic use can be hosted simply by adding a new branch named \emph{gh-pages} in the main repository.
+By hosting the firmware code in GitHub repository, one is able to use a feature called GitHub Pages, in which a small website for generic use can be hosted simply by adding a new branch named \emph{gh-pages} in the main repository. openMMC documentation has been uploaded to GitHub pages, but it is still under development \cite{openmmc-gh-page}.
 
 Using this tool simplifies code documentation update, since it just needs to be regenerated by Doxygen after each change and pulled to its respective GitHub Pages branch.
 
 \section{Acknowlegments}
 The authors would like to thank K. Macias from Creotech Instruments SA for the extensive firmware debug and P. Miedzik from GSI for the initial discussions in the firmware structure definition and by suggesting FreeRTOS as a base for the project.
 
+\iffalse  % only for "biblatex"
+	\newpage
+	\printbibliography
 
-%\iffalse  % only for "biblatex"
-%	\newpage
-%	\printbibliography
-%
-%% "biblatex" is not used, go the "manual" way
-%\else
-%
-%%\begin{thebibliography}{99}   % Use for  10-99  references
+% "biblatex" is not used, go the "manual" way
+\else
+
+\begin{thebibliography}{99}   % Use for  10-99  references
 %\begin{thebibliography}{9} % Use for 1-9 references
-%
-%\bibitem{jacow-help}
-%	JACoW,
-%	\url{http://www.jacow.org}
-%
-%\bibitem{IEEE}
-%	\textit{IEEE Editorial Style Manual},
-%	IEEE Periodicals, Piscataway,
-%	NJ, USA, Oct. 2014, pp. 34--52.
-%\end{thebibliography}
-%
-%\fi
 
-%\definecolor{jgreen}{cmyk}{0.81, 0.00, 0.97, 0.00}
-%\definecolor{jred}{cmyk}  {0.00, 0.99, 1.00, 0.00}
-%\definecolor{jgrepc}{cmyk}{0.74, 0.05, 1.00, 0.00}
-%\definecolor{jblue}{cmyk} {0.87, 0.54, 0.00, 0.00}
-%\definecolor{jvio}{cmyk}  {0.41, 0.82, 0.00, 0.00}
-%\definecolor{jbook}{cmyk} {0.28, 0.88, 0.79, 0.25}
-%\definecolor{jrept}{cmyk} {0.07, 0.70, 1.00, 0.00}
-%\definecolor{jmanu}{cmyk} {0.28, 0.77, 1.00, 0.23}
-%\definecolor{junpu}{cmyk} {0.00, 0.83, 0.65, 0.00}
+\bibitem{picmg-mtca}
+  PICMG MicroTCA Specification,
+  \url{https://www.picmg.org/openstandards/microtca}
+
+\bibitem{bpm-electronic-spec}
+  D. O. Tavares et al.,
+  ``Development of an Open-Source Hardware Platform for Sirius BPM and Orbit Feedback'',
+  ICALEPCS'13, San Francisco, October 2013, p. 1039 (2013)
+
+\bibitem{afc-ohwr}
+  AMC FMC Carrier Project,
+  \url{http://www.ohwr.org/projects/afc}
+
+\bibitem{ipmi}
+  Inteligent Platform Management Interface,
+  \url{http://www.intel.com/content/www/us/en/servers/ipmi/ipmi-home.html}
+
+\bibitem{openmmc-github}
+  openMMC GitHub Repository,
+  \url{https://github.com/lnls-dig/openMMC/}
+
+\bibitem{freertos}
+  FreeRTOS Project Page,
+  \url{http://www.freertos.org/}
+
+\bibitem{freertos-license}
+  FreeRTOS modified GPLv3 license,
+  \url{http://www.freertos.org/license.txt}
+
+\bibitem{gsi-mmc}
+  GSI MMC implementation repository,
+  \url{https://github.com/qermit/JAMMCI/}
+
+\bibitem{hpm}
+  Hardware Platform Management Overview,
+  \url{https://www.picmg.org/openstandards/hardware-platform-management/}
+
+\bibitem{cmake}
+  CMake Project,
+  \url{https://cmake.org/}
+
+\bibitem{travis-ci}
+  Travis Countinous Integration tool,
+  \url{https://travis-ci.org/}
+
+\bibitem{doxygen}
+  Doxygen Project,
+  \url{http://www.stack.nl/~dimitri/doxygen/}
+
+\bibitem{openmmc-gh-page}
+  openMMC Documentation at GitHub Pages,
+  \url{http://lnls-dig.github.io/openMMC/}
+
+
+
+\end{thebibliography}
+
+\fi
 
 \end{document}
